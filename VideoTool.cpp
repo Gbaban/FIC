@@ -6,6 +6,9 @@
 //#include <opencv2\cv.h>
 #include "opencv2/opencv.hpp"
 
+#define MAX_COUNTER 2
+#define MIN_COUNTER 1
+
 using namespace std;
 using namespace cv;
 //initial min and max HSV filter values.
@@ -182,6 +185,7 @@ int main(int argc, char* argv[])
 	//program
 	bool trackObjects = true;
 	bool useMorphOps = true;
+	int counter = 0;
 
 	Point p;
 	//Matrix to store each frame of the webcam feed
@@ -218,12 +222,24 @@ int main(int argc, char* argv[])
 		cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 		//filter HSV image between values and store filtered image to
 		//threshold matrix
-		inRange(HSV, Scalar(109, 48, 117), Scalar(192, 240, 256), threshold);
-		inRange(HSV, Scalar(24,126, 137), Scalar(76, 240, 256), threshold1);
+		if(counter < MIN_COUNTER)
+			{
+				inRange(HSV, Scalar(109, 48, 117), Scalar(192, 240, 256), threshold);
+				counter++;
+			}
+		else if(counter < MAX_COUNTER)
+			{
+				inRange(HSV, Scalar(24,126, 137), Scalar(76, 240, 256), threshold);
+				counter++;
+			}
+		else 
+			counter = 0;
+		
+		//inRange(HSV, Scalar(109, 48, 117), Scalar(192, 240, 256), threshold);
+		//inRange(HSV, Scalar(24,126, 137), Scalar(76, 240, 256), threshold1);
 		//perform morphological operations on thresholded image to eliminate noise
 		//and emphasize the filtered object(s)
 		if (useMorphOps){
-			morphOps(threshold1);
 			morphOps(threshold);
 		}
 		//pass in thresholded frame to our object tracking function
@@ -231,7 +247,6 @@ int main(int argc, char* argv[])
 		//filtered object
 		if (trackObjects){
 			trackFilteredObject(x, y, threshold, cameraFeed);
-			trackFilteredObject(x1, y1, threshold1, cameraFeed);
 		}
 
 		//show frames
