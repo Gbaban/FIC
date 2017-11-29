@@ -6,6 +6,17 @@
 //#include <opencv2\cv.h>
 #include "opencv2/opencv.hpp"
 
+#include<stdio.h>
+#include<stdlib.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<string.h>
+#include<arpa/inet.h>
+
+#define IP "193.226.12.217"
+#define PORT 20236
+
 #define MAX_COUNTER 2
 #define MIN_COUNTER 1
 
@@ -178,6 +189,58 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 		else putText(cameraFeed, "TOO MUCH NOISE! ADJUST FILTER", Point(0, 50), 1, 2, Scalar(0, 0, 255), 2);
 	}
 }
+
+void error1(char *msg)
+{
+  perror(msg);
+  exit(1);
+}
+
+int connectSocket(char * ip,int portno)
+{
+  int sockfd;
+  struct sockaddr_in serv_addr;
+  struct hostent;
+
+  sockfd = socket(AF_INET, SOCK_STREAM,0);
+  if (sockfd < 0)
+      error1("Error opening socket");
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_port = htons(portno);
+  if(inet_pton(AF_INET,ip,&serv_addr.sin_addr) <= 0)
+  {
+    error1("Error inet_pton");
+  }
+  if(connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
+  {
+    error1("Error connecting");
+  }
+
+  return sockfd;
+}
+
+int sendToSocket(int socket, char * buffer)
+{
+  int n;
+  n = send(socket,buffer,strlen(buffer),0);
+  if(n == 0)
+    error1("Error writing to socket");
+
+  return n;
+}
+
+float getDistance(int myX,int myY,int advX,int advY)
+{
+	return sqrt((myX-advX) *(myX-advX) + (myY-advY) * (myY-advY));
+}
+
+void doStuff(int myX,int myY,int advX,int advY)
+{
+
+	cout<<myX<<" "<<myY<<" "<<advX<<" "<<advY<<" "<<getDistance(myX,myY,advX,advY)<<endl;
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -198,6 +261,9 @@ int main(int argc, char* argv[])
 	//x and y values for the location of the object
 	int x = 0, y = 0;
 	int x1 = 0, y1 = 0;
+	int myX = 0, myY = 0;
+	int advX = 0, advY = 0;
+
 	//create slider bars for HSV filtering
 	//createTrackbars();
 	//video capture object to acquire webcam feed
@@ -222,19 +288,18 @@ int main(int argc, char* argv[])
 		cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 		//filter HSV image between values and store filtered image to
 		//threshold matrix
-		if(counter < MIN_COUNTER)
+		if(counter)
 			{
 				inRange(HSV, Scalar(109, 48, 117), Scalar(192, 240, 256), threshold);
-				counter++;
+				counter = 0;
 			}
-		else if(counter < MAX_COUNTER)
+		else
 			{
-				inRange(HSV, Scalar(24,126, 137), Scalar(76, 240, 256), threshold);
-				counter++;
+				//inRange(HSV, Scalar(24,126, 137), Scalar(76, 240, 256), threshold);
+				inRange(HSV, Scalar(24,60,70), Scalar(76, 240, 256), threshold);
+				counter = 1;
 			}
-		else 
-			counter = 0;
-		
+
 		//inRange(HSV, Scalar(109, 48, 117), Scalar(192, 240, 256), threshold);
 		//inRange(HSV, Scalar(24,126, 137), Scalar(76, 240, 256), threshold1);
 		//perform morphological operations on thresholded image to eliminate noise
@@ -248,6 +313,19 @@ int main(int argc, char* argv[])
 		if (trackObjects){
 			trackFilteredObject(x, y, threshold, cameraFeed);
 		}
+
+		if(counter)
+		{
+			myX = x;
+			myY = y;
+		}
+		else
+		{
+			advX = x;
+			advY = y;
+		}
+
+		doStuff(myX,myY,advX,advY);
 
 		//show frames
 		imshow(windowName2, threshold);
