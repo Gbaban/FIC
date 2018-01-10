@@ -14,8 +14,8 @@
 #include<string.h>
 #include<arpa/inet.h>
 
-#define IP "193.226.12.217"
-#define PORT 20236
+char IP[] = "193.226.12.217";
+#define PORT 20232
 
 #define MAX_COUNTER 2
 #define MIN_COUNTER 1
@@ -44,6 +44,7 @@ const std::string windowName1 = "HSV Image";
 const std::string windowName2 = "Thresholded Image";
 const std::string windowName3 = "After Morphological Operations";
 const std::string trackbarWindowName = "Trackbars";
+int socketfd;
 
 
 void on_mouse(int e, int x, int y, int d, void *ptr)
@@ -235,10 +236,17 @@ float getDistance(int myX,int myY,int advX,int advY)
 	return sqrt((myX-advX) *(myX-advX) + (myY-advY) * (myY-advY));
 }
 
+void Rotate(char* dir, int count) {
+	for(int i = 0; i < count; ++i)
+		sendToSocket(socketfd, dir);
+	sendToSocket(socketfd, "s");
+}
+
 void doStuff(int myX,int myY,int advX,int advY)
 {
-
 	cout<<myX<<" "<<myY<<" "<<advX<<" "<<advY<<" "<<getDistance(myX,myY,advX,advY)<<endl;
+	Rotate("l", 20);
+	sendToSocket(socketfd, "fs");
 }
 
 int main(int argc, char* argv[])
@@ -276,7 +284,7 @@ int main(int argc, char* argv[])
 	//start an infinite loop where webcam feed is copied to cameraFeed matrix
 	//all of our operations will be performed within this loop
 
-
+	//socketfd = connectSocket(IP, PORT);
 
 
 	while (1) {
@@ -284,19 +292,20 @@ int main(int argc, char* argv[])
 
 		//store image to matrix
 		capture.read(cameraFeed);
+		//if (cameraFeed.empty())
+			//return 5;
 		//convert frame from BGR to HSV colorspace
 		cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 		//filter HSV image between values and store filtered image to
 		//threshold matrix
 		if(counter)
 			{
-				inRange(HSV, Scalar(109, 48, 117), Scalar(192, 240, 256), threshold);
+				inRange(HSV, Scalar(69, 67, 118), Scalar(95, 190, 256), threshold);
 				counter = 0;
 			}
 		else
 			{
-				//inRange(HSV, Scalar(24,126, 137), Scalar(76, 240, 256), threshold);
-				inRange(HSV, Scalar(24,60,70), Scalar(76, 240, 256), threshold);
+				inRange(HSV, Scalar(109, 48, 117), Scalar(192, 240, 256), threshold);
 				counter = 1;
 			}
 
@@ -325,16 +334,16 @@ int main(int argc, char* argv[])
 			advY = y;
 		}
 
-		doStuff(myX,myY,advX,advY);
+		//doStuff(myX,myY,advX,advY);
 
 		//show frames
-		imshow(windowName2, threshold);
+		//imshow(windowName2, threshold);
 		imshow(windowName, cameraFeed);
-		imshow(windowName1, HSV);
+		//imshow(windowName1, HSV);
 		setMouseCallback("Original Image", on_mouse, &p);
 		//delay 30ms so that screen can refresh.
 		//image will not appear without this waitKey() command
-		waitKey(30);
+		waitKey(10);
 	}
 
 	return 0;
